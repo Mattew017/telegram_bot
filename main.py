@@ -1,4 +1,4 @@
-from telethon import TelegramClient
+from telethon.sync import TelegramClient
 import requests
 from bs4 import BeautifulSoup
 import time
