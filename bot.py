@@ -50,7 +50,7 @@ for x, phone, password, api_id, api_hash in accounts:
         time.sleep(3)
 
         if no_tasks_count == config.TRIES_COUNT:
-            logging.info("Заданий больше нет. Переходим на другой аккаунт")
+            logging.info("Заданий больше нет. Переходим к ботам")
             break
 
         message = client.get_messages(config.BOT_ADDRESS)[0]
@@ -68,6 +68,7 @@ for x, phone, password, api_id, api_hash in accounts:
 
         if url in bad_urls:
             skip_task(client, message)
+            logging.info('url был в bad_url')
             continue
         try:
             soup = BeautifulSoup(requests.get(url).content, "lxml")
@@ -106,3 +107,52 @@ for x, phone, password, api_id, api_hash in accounts:
 
         with open(path_to_bad_urls, "a") as f:
             f.write(f"{url}\n")
+
+    time.sleep(3)
+    no_tasks_count = 0  # Кол-во раз, когда не получилось найти ботов
+    client.send_message(config.BOT_ADDRESS, "/bots")
+    for loop_count in range(config.BOT_COUNT):
+        logging.info(f"Приступаем к {loop_count + 1} боту из {config.BOT_COUNT}")
+        time.sleep(3)
+
+        if no_tasks_count == config.TRIES_COUNT:
+            logging.info("Ботов больше нет. Переходим на другой аккаунт")
+            break
+
+        message = client.get_messages(config.BOT_ADDRESS)[0]  # что ответил основной бот
+
+        if 'Sorry, there are no new ads available.' in message.message:
+            no_tasks_count += 1
+            logging.info("Похоже, что боты закончились. Попытка получить их ещё раз...")
+            client.send_message(config.BOT_ADDRESS, "/bots")
+            time.sleep(8)
+            continue
+        else:
+            url = message.reply_markup.rows[0].buttons[0].url  # ссылка на сайт
+            try:
+                bot_name = utils.get_name_from_link(url)  # имя бота, которому нужно написать
+                client.send_message(bot_name, "/start")
+                time.sleep(10)  # бот может ответить с задержкой
+                msg_to_forward = client.get_messages(bot_name)[0]
+
+                no_answer = False
+                if msg_to_forward.message == "/start":  # скипаем бота, если он не отвечает
+                    no_answer = True
+                    skip_task(client, message)
+
+                if not no_answer:  # пересылаем основному боту, если бот ответил
+                    client.forward_messages(config.BOT_ADDRESS, msg_to_forward)
+                peer_id = msg_to_forward.peer_id  # Id бота, с которому мы писали
+                for dialog in client.iter_dialogs():
+                    if dialog.message.peer_id == peer_id:
+                        dialog.delete()  # удаляем диалог с ботом
+                        #print(f"dialog with {bot_name} was deleted")
+
+            except Exception as e:
+                logging.info("Скипаем бота, т.к. есть проверка на ddos или еще что-то")
+                skip_task(client, message)
+                continue
+
+    time.sleep(60*30)
+    logging.info("Спим 30 минут, т.к. ботов всего 2")
+
