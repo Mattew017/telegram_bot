@@ -1,3 +1,3 @@
 venv
-urls
-accounts.db
+.idea
+__pycache__

@@ -12,7 +12,7 @@ import config
 
 requests.adapters.DEFAULT_RETRIES = config.DEFAULT_RETRIES
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s:%(message)s')
-
+logging.disable()
 os.makedirs(config.URLS_FOLDER_PATH, exist_ok=True)
 
 
@@ -153,6 +153,7 @@ for x, phone, password, api_id, api_hash in accounts:
                 skip_task(client, message)
                 continue
 
-    time.sleep(60*30)
-    logging.info("Спим 30 минут, т.к. ботов всего 2")
+logging.info("Спим 30 минут, т.к. ботов всего 2")
+time.sleep(60*30)
+
 
